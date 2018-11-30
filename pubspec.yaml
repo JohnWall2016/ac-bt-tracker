@@ -1,0 +1,10 @@
+name: 'bt_tracker'
+
+environment:
+  sdk: '>=2.0.0'
+
+dependencies:
+  path: ^1.2.0
+  intl: ^0.15.7
+  args: ^1.5.1
+  process_run: 0.8.0+1
