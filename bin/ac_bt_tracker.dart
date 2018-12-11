@@ -9,7 +9,7 @@ import 'package:process_run/cmd_run.dart';
 class BTTrackerCache {
 
   BTTrackerCache() {
-    var dir = Directory(_dir);
+    var dir = Directory(_cachedDir);
     if (!dir.existsSync()) {
       dir.createSync();
     }
@@ -17,7 +17,7 @@ class BTTrackerCache {
 
   static final String _uri = 'https://raw.githubusercontent.com/ngosang/trackerslist/master/trackers_best_ip.txt';
 
-  static String _dir = (() {
+  static String _cachedDir = (() {
     if (Platform.environment.containsKey('BTL_CACHE')) {
       return Platform.environment['BTL_CACHE'];
     } else if (Platform.isWindows) {
@@ -28,8 +28,12 @@ class BTTrackerCache {
     }
   })();
 
-  Future<void> downloadTrackerList({String currentDate, 
-                                    String seperator = ','}) async {
+  String get _cachedFile {
+    var currentDate = DateFormat('yyyyMMdd').format(DateTime.now());
+    return path.join(_cachedDir, 'btl-$currentDate.txt');
+  }
+
+  Future<void> downloadTrackerList({String seperator = ','}) async {
     var httpClient = HttpClient();
     var request = await httpClient.getUrl(Uri.parse(_uri));
     var response = await request.close();
@@ -45,20 +49,14 @@ class BTTrackerCache {
     httpClient.close();
     //print(list);
 
-    if (currentDate == null) {
-      currentDate = DateFormat('yyyyMMdd').format(DateTime.now());
-    }
-    var currentFile  = path.join(_dir, 'btl-$currentDate.txt');
-    var file = File(currentFile);
+    var file = File(_cachedFile);
     file.writeAsStringSync(list.toString());
   }
 
   Future<String> getTrackerList({bool update = false}) async {
-    var currentDate = DateFormat('yyyyMMdd').format(DateTime.now());
-    var currentFile = path.join(_dir, 'btl-$currentDate.txt');
-    var file = File(currentFile);
+    var file = File(_cachedFile);
     if (!file.existsSync() || update) {
-      await downloadTrackerList(currentDate: currentDate);
+      await downloadTrackerList();
     }
     return file.readAsStringSync();
   }
@@ -85,12 +83,7 @@ ${parser.usage}
     return;
   }
   
-  var btList;
-  if (results['update-trackers']) {
-    btList = await BTTrackerCache().getTrackerList(update: true);
-  } else {
-    btList = await BTTrackerCache().getTrackerList();
-  }
+  var btList = await BTTrackerCache().getTrackerList(update: results['update-trackers']);
   
   var aria2c = path.join(File(Platform.script.toFilePath()).parent.path, 'aria2c');
   var cmd = ProcessCmd(aria2c, ['--bt-tracker=$btList']..addAll(results.rest), 
